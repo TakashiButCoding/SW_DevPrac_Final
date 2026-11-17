@@ -27,7 +27,7 @@ export default function EquipmentSelect({
     );
 
     return (
-        <Select value={value} onValueChange={onChange}>
+        <Select value={value} onValueChange={(value) => onChange(value ?? "")}>
             <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select equipment">
                     {selectedEquipment?.name}

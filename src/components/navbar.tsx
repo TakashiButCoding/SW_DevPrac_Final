@@ -19,7 +19,7 @@ export default function Navbar() {
         { label: "Equipments", href: "/equipment" },
         { label: "Rent", href: "/rent" },
         ...(isMember
-            ? [{ label: "My Rentals", href: "/rentals" }]
+            ? [{ label: "My Rentals", href: "/myrent" }]
             : []),
 
         ...(isAdmin
