@@ -26,8 +26,6 @@ export default function MyRentals({ equipments }: { equipments: Equipment[] }) {
     const [busy, setBusy] = useState(false);
     const today = new Date().toISOString().slice(0, 10);
     const load = useCallback(async (signal?: AbortSignal) => {
-        setLoading(true);
-        setError("");
         try {
             const response = await fetch("/api/rentals", { cache: "no-store", signal });
             const result = await response.json();
@@ -91,7 +89,7 @@ export default function MyRentals({ equipments }: { equipments: Equipment[] }) {
     if (loading) {
         rentalContent = <p role="status" className="py-10 text-center">Loading rental history...</p>;
     } else if (error) {
-        rentalContent = <div className="card space-y-4 p-6" role="alert"><p>{error}</p><Button onClick={() => void load()}>Try Again</Button></div>;
+        rentalContent = <div className="card space-y-4 p-6" role="alert"><p>{error}</p><Button onClick={() => { setLoading(true); setError(""); void load(); }}>Try Again</Button></div>;
     } else if (sorted.length === 0) {
         rentalContent = <div className="card space-y-3 p-10 text-center"><h2 className="text-xl font-semibold">No rental requests yet</h2><p className="text-muted-foreground">Your requests will appear here after you submit a rental.</p><Link href="/rent" className="text-primary underline">Make your first request</Link></div>;
     } else {
@@ -142,3 +140,4 @@ export default function MyRentals({ equipments }: { equipments: Equipment[] }) {
         </div>
     );
 }
+
