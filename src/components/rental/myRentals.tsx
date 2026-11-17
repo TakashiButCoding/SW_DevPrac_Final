@@ -91,7 +91,12 @@ export default function MyRentals({ equipments }: { equipments: Equipment[] }) {
     } else if (error) {
         rentalContent = <div className="card space-y-4 p-6" role="alert"><p>{error}</p><Button onClick={() => { setLoading(true); setError(""); void load(); }}>Try Again</Button></div>;
     } else if (sorted.length === 0) {
-        rentalContent = <div className="card space-y-3 p-10 text-center"><h2 className="text-xl font-semibold">No rental requests yet</h2><p className="text-muted-foreground">Your requests will appear here after you submit a rental.</p><Link href="/rent" className="text-primary underline">Make your first request</Link></div>;
+        rentalContent = 
+        <div className="card space-y-3 p-10 text-center">
+            <h2 className="text-xl font-semibold">No rental requests yet</h2>
+            <p className="text-muted-foreground">Your requests will appear here after you submit a rental.</p>
+            <Link href="/rent" className="text-primary underline">Make your first request</Link>
+        </div>;
     } else {
         rentalContent = <>
             <p className="text-sm text-muted-foreground">{sorted.length} rental request{sorted.length === 1 ? "" : "s"}</p>

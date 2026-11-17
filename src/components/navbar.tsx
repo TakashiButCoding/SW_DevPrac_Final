@@ -14,21 +14,19 @@ export default function Navbar() {
 
     const isAdmin = role === "admin";
     const isMember = role === "member";
-    const navLinks = [
-        { label: "Home", href: "/" },
-        { label: "Equipments", href: "/equipment" },
-        { label: "Rent", href: "/rent" },
-        ...(isMember
-            ? [{ label: "My Rentals", href: "/myrent" }]
-            : []),
-
-        ...(isAdmin
-            ? [
-                { label: "Manage Equipment", href: "/admin/equipment" },
-                { label: "Manage Rentals", href: "/admin/rentals" },
-            ]
-            : []),
-    ];
+    const navLinks = isAdmin
+        ? [
+            { label: "Manage Equipment", href: "/admin/equipment" },
+            { label: "Manage Rentals", href: "/admin/rentals" },
+        ]
+        : [
+            { label: "Home", href: "/" },
+            { label: "Equipments", href: "/equipment" },
+            { label: "Rent", href: "/rent" },
+            ...(isMember
+                ? [{ label: "My Rentals", href: "/myrent" }]
+                : []),
+        ];
 
     let authButton = null;
     if (status !== "loading") {
