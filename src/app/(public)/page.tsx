@@ -46,9 +46,9 @@ export default function Home() {
             </div>
 
             {/* Right: Hero Image */}
-            <div className="relative flex min-h-80 items-center justify-center rounded-3xl bg-blue-100 p-8">
+            <div className="relative flex min-h-80 items-center justify-center rounded-3xl bg-blue-100 overflow-hidden">
             <Image
-                src="/images/hero.png"
+                src="/images/banner.jpg"
                 alt="Equipment available for rental"
                 width={550}
                 height={450}
