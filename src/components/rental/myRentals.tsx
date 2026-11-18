@@ -9,6 +9,8 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { Equipment } from "@/types/equipmentsType";
+import { getMaxRentalQuantity, isValidRentalQuantity, validateRentalDates } from "@/libs/rentalValidation";
+import RentalDateFields from "./rentalDateFields";
 
 type Rental = { _id: string; equipment: Equipment | null; quantity: number; startDate: string; returnDate: string; createdAt: string };
 type Draft = { equipment: string; quantity: number; startDate: string; returnDate: string };
@@ -24,7 +26,6 @@ export default function MyRentals({ equipments }: { equipments: Equipment[] }) {
     const [draft, setDraft] = useState<Draft>({ equipment: "", quantity: 1, startDate: "", returnDate: "" });
     const [deleting, setDeleting] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
-    const today = new Date().toISOString().slice(0, 10);
     const load = useCallback(async (signal?: AbortSignal) => {
         try {
             const response = await fetch("/api/rentals", { cache: "no-store", signal });
@@ -50,12 +51,13 @@ export default function MyRentals({ equipments }: { equipments: Equipment[] }) {
         if (busy) return;
         if (method === "PUT") {
             const equipment = equipments.find(item => item._id === draft.equipment);
-            const duration = (Date.parse(draft.returnDate) - Date.parse(draft.startDate)) / 86400000;
-            if (!equipment?.isActive || !Number.isInteger(draft.quantity) || draft.quantity < 1 || draft.quantity > Math.min(3, equipment.quantity)) {
+            if (!isValidRentalQuantity(draft.quantity, equipment)) {
                 toast.error("Select active equipment and a quantity between 1 and the available stock (maximum 3)."); return;
             }
-            if (!draft.startDate || !draft.returnDate || draft.startDate < today || !Number.isFinite(duration) || duration < 0 || duration > 7) {
-                toast.error("Choose dates from today onward, with a return date within 7 days of the start."); return;
+            const dateError = validateRentalDates(draft.startDate, draft.returnDate);
+            if (dateError) {
+                toast.error(dateError);
+                return;
             }
         }
         setBusy(true);
@@ -84,7 +86,6 @@ export default function MyRentals({ equipments }: { equipments: Equipment[] }) {
     }
     const sorted = [...rentals].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     const selected = equipments.find(item => item._id === draft.equipment);
-    const maxReturn = draft.startDate ? new Date(Date.parse(draft.startDate) + 7 * 86400000).toISOString().slice(0, 10) : undefined;
     let rentalContent;
     if (loading) {
         rentalContent = <p role="status" className="py-10 text-center">Loading rental history...</p>;
@@ -119,9 +120,12 @@ export default function MyRentals({ equipments }: { equipments: Equipment[] }) {
                             {!equipments.some(item => item._id === draft.equipment && item.isActive && item.quantity > 0) && draft.equipment && <option value={draft.equipment} disabled>Unavailable - choose another item</option>}
                             {equipments.filter(item => item.isActive && item.quantity > 0).map(item => <option key={item._id} value={item._id}>{item.name}</option>)}
                         </select></label>
-                        <label className="space-y-2 text-sm">Quantity<Input required type="number" min={1} max={Math.min(3, selected?.quantity ?? 3)} step={1} value={draft.quantity} onChange={event => setDraft({ ...draft, quantity: Number(event.target.value) })} /></label>
-                        <label className="space-y-2 text-sm">Start Date<Input required type="date" min={today} value={draft.startDate} onChange={event => setDraft({ ...draft, startDate: event.target.value })} /></label>
-                        <label className="space-y-2 text-sm">Return Date<Input required type="date" min={draft.startDate || today} max={maxReturn} value={draft.returnDate} onChange={event => setDraft({ ...draft, returnDate: event.target.value })} /></label>
+                        <label className="space-y-2 text-sm">Quantity<Input required type="number" min={1} max={getMaxRentalQuantity(selected)} step={1} value={draft.quantity} onChange={event => setDraft({ ...draft, quantity: Number(event.target.value) })} /></label>
+                        <RentalDateFields
+                            startDate={draft.startDate}
+                            returnDate={draft.returnDate}
+                            onChange={dates => setDraft(current => ({ ...current, ...dates }))}
+                        />
                     </fieldset>
                     <div className="flex gap-2"><Button type="submit" disabled={busy}>{busy ? "Saving..." : "Save Changes"}</Button><Button type="button" variant="outline" disabled={busy} onClick={() => setEditing(null)}>Cancel</Button></div>
                 </form>}

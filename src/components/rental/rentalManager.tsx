@@ -5,6 +5,8 @@ import { Eye, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { Equipment } from "@/types/equipmentsType";
+import { getMaxRentalQuantity, isValidRentalQuantity, validateRentalDates } from "@/libs/rentalValidation";
+import RentalDateFields from "./rentalDateFields";
 
 type Rental = {
     _id: string;
@@ -37,8 +39,6 @@ export default function RentalManager() {
     const [mode, setMode] = useState<"view" | "edit" | "delete" | null>(null);
     const [draft, setDraft] = useState<Draft>({ equipment: "", quantity: "1", startDate: "", returnDate: "" });
     const [busy, setBusy] = useState(false);
-    // Match the rental service's UTC calendar-day validation.
-    const today = new Date().toISOString().slice(0, 10);
     const load = useCallback(async (signal?: AbortSignal) => {
         setLoading(true);
         setError("");
@@ -72,12 +72,13 @@ export default function RentalManager() {
         if (!deleting) {
             const item = equipment.find(item => item._id === draft.equipment);
             const quantity = Number(draft.quantity);
-            const duration = (Date.parse(draft.returnDate) - Date.parse(draft.startDate)) / 86400000;
-            if (!item?.isActive || !draft.quantity || !Number.isInteger(quantity) || quantity < 1 || quantity > Math.min(3, item.quantity)) {
+            if (!isValidRentalQuantity(quantity, item)) {
                 setError("Choose active equipment and a whole quantity from 1 to the available stock (maximum 3)."); return;
             }
-            if (!draft.startDate || !draft.returnDate || draft.startDate < today || !Number.isFinite(duration) || duration < 0 || duration > 7) {
-                setError("Choose a start date today or later and a return date within 7 days of the start."); return;
+            const dateError = validateRentalDates(draft.startDate, draft.returnDate);
+            if (dateError) {
+                setError(dateError);
+                return;
             }
         }
         setBusy(true);
@@ -97,7 +98,6 @@ export default function RentalManager() {
     function close() { setMode(null); setSelected(null); setError(""); }
     const visible = [...rentals].filter(item => [item._id, item.user?.name, item.user?.email, item.equipment?.name].join(" ").toLowerCase().includes(search.toLowerCase())).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     const chosen = equipment.find(item => item._id === draft.equipment);
-    const maxReturn = draft.startDate && Number.isFinite(Date.parse(draft.startDate)) ? new Date(Date.parse(draft.startDate) + 7 * 86400000).toISOString().slice(0, 10) : undefined;
 
     return <div className="mx-auto max-w-7xl space-y-6 px-4 py-10">
         <div><p className="mb-2 text-sm font-medium text-primary">Administration</p><h1 className="text-3xl font-semibold">Manage rental requests</h1><p className="mt-2 text-muted-foreground">View and manage equipment rental requests from all members.</p></div>
@@ -123,9 +123,12 @@ export default function RentalManager() {
                         {draft.equipment && !equipment.some(item => item._id === draft.equipment && item.isActive && item.quantity > 0) && <option value={draft.equipment} disabled>Unavailable — choose another item</option>}
                         {equipment.filter(item => item.isActive && item.quantity > 0).map(item => <option key={item._id} value={item._id}>{item.name} ({item.quantity} available)</option>)}
                     </select></label>
-                    <label className="space-y-2 text-sm">Quantity<Input type="number" required min={1} max={Math.min(3, chosen?.quantity ?? 3)} step={1} value={draft.quantity} onChange={event => setDraft({ ...draft, quantity: event.target.value })} /></label>
-                    <label className="space-y-2 text-sm">Start date<Input type="date" required min={today} value={draft.startDate} onChange={event => setDraft({ ...draft, startDate: event.target.value })} /></label>
-                    <label className="space-y-2 text-sm">Return date<Input type="date" required min={draft.startDate || today} max={maxReturn} value={draft.returnDate} onChange={event => setDraft({ ...draft, returnDate: event.target.value })} /></label>
+                    <label className="space-y-2 text-sm">Quantity<Input type="number" required min={1} max={getMaxRentalQuantity(chosen)} step={1} value={draft.quantity} onChange={event => setDraft({ ...draft, quantity: event.target.value })} /></label>
+                    <RentalDateFields
+                        startDate={draft.startDate}
+                        returnDate={draft.returnDate}
+                        onChange={dates => setDraft(current => ({ ...current, ...dates }))}
+                    />
                 </fieldset>
                 <div className="flex gap-2"><Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save changes"}</Button><Button type="button" variant="outline" disabled={busy} onClick={close}>Cancel</Button></div>
             </form>}
